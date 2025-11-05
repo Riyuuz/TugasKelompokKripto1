@@ -1,4 +1,3 @@
-# database.py
 import sqlite3
 import bcrypt # Using bcrypt from crypto.py's logic
 import json
@@ -108,7 +107,7 @@ def get_user_details(username):
         return {"username": result[0], "face_encoding_json": result[1]}
     return None
 
-# --- 3. FUNGSI-FUNGSI PESAN (Tetap Sama, tapi ditambah 1) ---
+# --- 3. FUNGSI-FUNGSI PESAN  ---
 
 def get_all_usernames(exclude_user=None):
     """Mengambil semua username dari tabel users, kecuali exclude_user."""
