@@ -94,6 +94,33 @@ def read_users_me(
     """
     return current_user
 
+@app.delete("/users/me", response_model=Dict[str, str])
+def delete_self_user(
+    delete_request: models.UserDeleteConfirm,
+    current_user: models.UserInDB = Depends(auth.get_current_user)
+):
+    """
+    Menghapus akun pengguna yang sedang login setelah verifikasi password.
+    """
+    success, msg = database.delete_user_account(
+        current_user['username'], 
+        delete_request.password
+    )
+    
+    if not success:
+        if "Password salah" in msg:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, 
+                detail=msg
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+                detail=msg
+            )
+            
+    return {"detail": msg}
+
 # --- 2. Crypto Tool Endpoints (Protected) ---
 
 @app.post("/crypto/text/encrypt", response_model=Dict[str, str])

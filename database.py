@@ -8,7 +8,7 @@ from crypto import hash_password_bcrypt, verify_password_bcrypt
 
 DATABASE_FILE = 'users.db'
 
-# --- 1. Database Initialization (Modified) ---
+# --- 1. Database Initialization ---
 
 def init_db():
     """Membuat tabel users DAN messages."""
@@ -26,19 +26,23 @@ def init_db():
     );
     ''')
     
-    # Tabel Messages (Tetap Sama)
+    # Tabel Messages
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS messages (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        sender_username TEXT NOT NULL,
+        sender_username TEXT, -- Diubah dari NOT NULL, karena bisa jadi NULL
         recipient_username TEXT NOT NULL,
         message_type TEXT NOT NULL, 
         encrypted_data BLOB NOT NULL,
         original_filename TEXT,
         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
         is_read INTEGER DEFAULT 0,
-        FOREIGN KEY (sender_username) REFERENCES users (username),
-        FOREIGN KEY (recipient_username) REFERENCES users (username)
+        
+        -- Jika pengirim dihapus, tandai sebagai NULL (Pengguna Dihapus)
+        FOREIGN KEY (sender_username) REFERENCES users (username) ON DELETE SET NULL,
+        
+        -- Jika penerima dihapus, hapus pesan (membersihkan kotak masuk mereka)
+        FOREIGN KEY (recipient_username) REFERENCES users (username) ON DELETE CASCADE
     );
     ''')
     
@@ -107,6 +111,33 @@ def get_user_details(username):
         return {"username": result[0], "face_encoding_json": result[1]}
     return None
 
+def delete_user_account(username, password):
+    """
+    Memverifikasi password pengguna dan menghapus akun mereka.
+    Database akan otomatis menangani aturan CASCADE dan SET NULL.
+    """
+    # Langkah 1: Verifikasi apakah passwordnya benar
+    user_data = authenticate_user(username, password)
+    
+    if user_data is None:
+        return False, "Password salah. Penghapusan akun dibatalkan."
+        
+    # Langkah 2: Jika password benar, hapus pengguna
+    try:
+        conn = sqlite3.connect(DATABASE_FILE)
+        cursor = conn.cursor()
+        
+        # Cukup hapus dari tabel 'users', 
+        # FOREIGN KEY akan menangani sisanya.
+        cursor.execute("DELETE FROM users WHERE username = ?", (username,))
+        
+        conn.commit()
+        conn.close()
+        
+        return True, "Akun berhasil dihapus."
+    except Exception as e:
+        return False, f"Error database: {e}"
+    
 # --- 3. FUNGSI-FUNGSI PESAN  ---
 
 def get_all_usernames(exclude_user=None):

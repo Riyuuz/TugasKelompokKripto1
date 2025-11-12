@@ -197,10 +197,7 @@ if 'current_message_blob' not in st.session_state:
 def login_form():
     _, col_center, _ = st.columns([1, 1.2, 1])
     with col_center:
-        # --- PERUBAHAN DI SINI ---
-        # Mengganti st.title dengan st.markdown untuk perataan tengah
         st.markdown("<h1 style='text-align: center;'>AetherSecure</h1>", unsafe_allow_html=True)
-        # --- AKHIR PERUBAHAN ---
         
         st.markdown("<h4 style='text-align: center; color: #94A3B8;'>Multi-Layer Crypto Vault</h4>", unsafe_allow_html=True)
         st.empty()
@@ -648,7 +645,12 @@ def render_messaging_page():
             with st.container(border=True):
                 col1, col2, col3 = st.columns([3, 2, 1.5])
                 with col1:
-                    st.markdown(f"**Dari:** `{msg['sender_username']}`")
+                    sender = msg['sender_username']
+                    if sender is None:
+                        display_sender = "_[Pengguna Dihapus]_"
+                    else:
+                        display_sender = f"`{sender}`"
+                    st.markdown(f"**Dari:** {display_sender}")
                     st.caption(f"Diterima: {ts}")
                 with col2:
                     st.markdown(f"**Tipe:**")
@@ -776,7 +778,41 @@ def main_app_content():
     st.sidebar.divider()
     st.sidebar.header("Tentang Aplikasi")
     st.sidebar.info("AetherSecure (Client-Server) adalah vault kriptografi berlapis untuk mengamankan data Anda.")
-
+    st.sidebar.divider()
+    with st.sidebar.expander("Zona Berbahaya ⚠️"):
+        st.warning("Menghapus akun Anda bersifat permanen dan tidak dapat dibatalkan.") 
+        password_confirm = st.text_input(
+            "Konfirmasi password Anda untuk menghapus:", 
+            type="password",
+            key="delete_confirm_pass"
+            )
+            
+        if st.button("Hapus Akun Saya Secara Permanen", use_container_width=True):
+            if password_confirm:
+                headers = get_auth_headers()
+                if headers:
+                    try:
+                        # Panggil endpoint DELETE baru
+                        response = requests.delete(
+                            f"{API_BASE_URL}/users/me",
+                            json={"password": password_confirm}, # Kirim password di body
+                            headers=headers
+                            )
+                            
+                        if response.status_code == 200:
+                            st.success("Akun Anda telah berhasil dihapus.")
+                            st.balloons()
+                            # Panggil logout untuk membersihkan sesi
+                            logout()
+                            st.rerun() # Rerun untuk kembali ke layar login
+                        else:
+                            st.error(f"Gagal: {response.json().get('detail')}", icon="🚨")
+                    except requests.ConnectionError:
+                        st.error("Gagal terhubung ke server.", icon="🌐")
+                else:
+                    st.error("Masukkan password Anda untuk konfirmasi.", icon="🔒")
+    st.sidebar.divider()
+    
     if st.session_state.page == "🧰 Crypto Tools":
         render_crypto_tools_page()
     elif st.session_state.page == "📨 Pesan Aman":

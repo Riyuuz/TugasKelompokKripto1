@@ -21,6 +21,9 @@ class Token(BaseModel):
 class TokenData(BaseModel):
     username: Optional[str] = None
 
+class UserDeleteConfirm(BaseModel):
+    password: str
+
 # --- Crypto Tool Models ---
 
 class TextEncryptRequest(BaseModel):
